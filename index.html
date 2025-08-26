@@ -654,7 +654,7 @@
                                 </div>
                             </div>
                             <div class="photo-label">Foto Kondisi Gedung</div>
-                            <input type="file" id="foto1" accept="image/*" onchange="handleImageUpload(this, 'preview1', 'Foto Kondisi Gedung')">
+                            <input type="file" id="foto1" accept="image/*,image/heic,image/heif" capture="environment" data-title="Foto Kondisi Gedung" onchange="handleImageUpload(this, 'preview1', 'Foto Kondisi Gedung')">
                         </div>
 
                         <div class="photo-upload">
@@ -671,7 +671,7 @@
                                 </div>
                             </div>
                             <div class="photo-label">Foto Sekitar Lokasi</div>
-                            <input type="file" id="foto2" accept="image/*" onchange="handleImageUpload(this, 'preview2', 'Foto Sekitar Lokasi')">
+                            <input type="file" id="foto2" accept="image/*,image/heic,image/heif" capture="environment" data-title="Foto Sekitar Lokasi" onchange="handleImageUpload(this, 'preview2', 'Foto Sekitar Lokasi')">
                         </div>
 
                         <div class="photo-upload">
@@ -688,7 +688,7 @@
                                 </div>
                             </div>
                             <div class="photo-label">Foto Tim Pengamanan</div>
-                            <input type="file" id="foto3" accept="image/*" onchange="handleImageUpload(this, 'preview3', 'Foto Tim Pengamanan')">
+                            <input type="file" id="foto3" accept="image/*,image/heic,image/heif" capture="environment" data-title="Foto Tim Pengamanan" onchange="handleImageUpload(this, 'preview3', 'Foto Tim Pengamanan')">
                         </div>
 
                         <div class="photo-upload">
@@ -705,7 +705,7 @@
                                 </div>
                             </div>
                             <div class="photo-label">Foto Situasi Umum</div>
-                            <input type="file" id="foto4" accept="image/*" onchange="handleImageUpload(this, 'preview4', 'Foto Situasi Umum')">
+                            <input type="file" id="foto4" accept="image/*,image/heic,image/heif" capture="environment" data-title="Foto Situasi Umum" onchange="handleImageUpload(this, 'preview4', 'Foto Situasi Umum')">
                         </div>
                     </div>
                 </div>
@@ -744,15 +744,54 @@
 
         // Initialize photo upload events after DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up photo uploads...');
             setupPhotoUploadEvents();
+            
+            // Debug: Check if inputs exist
+            ['foto1', 'foto2', 'foto3', 'foto4'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    console.log('Found input:', id);
+                } else {
+                    console.error('Missing input:', id);
+                }
+            });
         });
 
         // Also run setup immediately in case DOM is already loaded
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', setupPhotoUploadEvents);
         } else {
-            setupPhotoUploadEvents();
+            console.log('DOM already loaded, setting up immediately...');
+            setTimeout(setupPhotoUploadEvents, 100);
         }
+
+        // Add a global click handler as backup
+        window.addEventListener('load', function() {
+            console.log('Window loaded, adding backup handlers...');
+            
+            // Backup method: add click handlers to photo-upload divs
+            document.querySelectorAll('.photo-upload').forEach((upload, index) => {
+                const input = upload.querySelector('input[type="file"]');
+                if (input) {
+                    upload.addEventListener('click', function(e) {
+                        console.log('Backup click handler triggered for:', input.id);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Force trigger with multiple methods
+                        setTimeout(() => {
+                            try {
+                                input.click();
+                            } catch (err) {
+                                console.log('Click failed, trying focus...');
+                                input.focus();
+                            }
+                        }, 10);
+                    }, true); // Use capture phase
+                }
+            });
+        });
 
         function selectImage(inputId) {
             // Force click on mobile devices
@@ -766,52 +805,139 @@
         function setupPhotoUploadEvents() {
             const photoUploads = document.querySelectorAll('.photo-upload');
             
-            photoUploads.forEach(upload => {
-                // Get the input ID from the onclick attribute or find the input inside
+            photoUploads.forEach((upload, index) => {
+                // Get the input inside this upload container
                 const input = upload.querySelector('input[type="file"]');
-                if (input) {
-                    // Remove onclick and add proper event listeners
-                    upload.removeAttribute('onclick');
+                if (!input) return;
+                
+                // Remove any existing onclick attribute
+                upload.removeAttribute('onclick');
+                
+                // Function to trigger file input
+                const triggerFileInput = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     
-                    // Add click handler
-                    upload.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
+                    console.log('Triggering file input for:', input.id);
+                    
+                    // Multiple methods to ensure it works on iOS
+                    try {
+                        // Method 1: Direct click
                         input.click();
-                    });
-                    
-                    // Add touch handlers for iOS
-                    upload.addEventListener('touchstart', function(e) {
-                        e.preventDefault();
-                    });
-                    
-                    upload.addEventListener('touchend', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
+                        
+                        // Method 2: Dispatch click event
+                        setTimeout(() => {
+                            const clickEvent = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            });
+                            input.dispatchEvent(clickEvent);
+                        }, 100);
+                        
+                        // Method 3: Focus and trigger
+                        setTimeout(() => {
+                            input.focus();
+                            input.click();
+                        }, 200);
+                        
+                    } catch (error) {
+                        console.error('Error triggering file input:', error);
+                        // Fallback: try to focus the input
+                        input.style.display = 'block';
+                        input.style.position = 'absolute';
+                        input.style.opacity = '0';
+                        input.focus();
                         input.click();
-                    });
-                    
-                    // Make sure it's focusable for iOS
-                    upload.setAttribute('tabindex', '0');
-                    upload.style.cursor = 'pointer';
-                    upload.style.webkitTapHighlightColor = 'rgba(0,0,0,0.1)';
-                }
+                        setTimeout(() => {
+                            input.style.display = 'none';
+                        }, 1000);
+                    }
+                };
+                
+                // Add multiple event listeners for maximum compatibility
+                upload.addEventListener('click', triggerFileInput, { passive: false });
+                upload.addEventListener('touchend', triggerFileInput, { passive: false });
+                upload.addEventListener('tap', triggerFileInput, { passive: false });
+                
+                // Add visual feedback
+                upload.addEventListener('touchstart', (e) => {
+                    upload.style.backgroundColor = '#f0f2ff';
+                    upload.style.borderColor = '#764ba2';
+                }, { passive: true });
+                
+                upload.addEventListener('touchend', () => {
+                    setTimeout(() => {
+                        upload.style.backgroundColor = '';
+                        upload.style.borderColor = '#667eea';
+                    }, 200);
+                }, { passive: true });
+                
+                // Make sure the input is properly configured
+                input.setAttribute('accept', 'image/*');
+                input.setAttribute('capture', 'environment'); // Use rear camera by default
+                
+                // Ensure the input change event works
+                input.addEventListener('change', function(e) {
+                    console.log('File selected:', this.files[0]);
+                    if (this.files && this.files[0]) {
+                        const previewId = this.id.replace('foto', 'preview');
+                        const photoTitle = this.getAttribute('data-title') || 'Photo';
+                        handleImageUpload(this, previewId, photoTitle);
+                    }
+                }, { passive: false });
             });
         }
 
         function handleImageUpload(input, previewId, photoTitle) {
             const file = input.files[0];
-            if (!file) return;
+            console.log('handleImageUpload called with file:', file);
+            
+            if (!file) {
+                console.log('No file selected');
+                return;
+            }
+
+            // Check file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+            if (!validTypes.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
+                alert('❌ Format file tidak didukung. Gunakan JPG, PNG, atau HEIC');
+                return;
+            }
+
+            // Check file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('❌ Ukuran file terlalu besar. Maksimal 10MB');
+                return;
+            }
+
+            console.log('Processing file:', file.name, file.type, file.size);
 
             const reader = new FileReader();
             reader.onload = function(e) {
+                console.log('FileReader onload triggered');
                 const img = new Image();
                 img.onload = function() {
+                    console.log('Image loaded successfully:', img.width, 'x', img.height);
                     processAndDisplayImage(img, previewId);
+                };
+                img.onerror = function() {
+                    console.error('Error loading image');
+                    alert('❌ Gagal memuat gambar. Coba file lain.');
                 };
                 img.src = e.target.result;
             };
-            reader.readAsDataURL(file);
+            reader.onerror = function() {
+                console.error('FileReader error');
+                alert('❌ Gagal membaca file. Coba lagi.');
+            };
+            
+            try {
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('Error reading file:', error);
+                alert('❌ Error membaca file: ' + error.message);
+            }
         }
 
         function processAndDisplayImage(img, previewId) {
